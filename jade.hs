@@ -11,6 +11,7 @@ data Function = Constant Double
               | Exponential Base Function
               | Log Base Function
               | Undefined
+              | Indeterminate
               deriving (Eq)
 
 instance Show Function where
@@ -30,6 +31,7 @@ instance Show Function where
     show (Exponential b f) = (intShow b) ++ "^" ++ "(" ++ (show f) ++ ")"
     show (Log b f) = "log" ++ (intShow b) ++ "(" ++ (show f) ++ ")"
     show Undefined = "Undefined"
+    show Indeterminate = "Indeterminate"
 
 derivative :: Function -> Function
 derivative (Constant _) = Constant 0
@@ -42,6 +44,7 @@ derivative (Sin f) = Product (derivative f) (Cos f)
 derivative (Cos f) = Product (derivative f) (Product (Constant (-1)) (Sin f))
 derivative (Exponential b f) = Product (derivative f) (Product (Exponential b f) (Log 2.71 (Constant b)))
 derivative Undefined = Undefined
+derivative Indeterminate = Indeterminate
 
 simplify :: Function -> Function
 simplify (Sum f (Constant 0)) = f
@@ -60,6 +63,7 @@ simplify (Product (Constant a) (Constant b)) = Constant (a * b)
 simplify (Product u v)
     | u == v    = Polynomial 2 u
     | otherwise = Product (simplify u) (simplify v)
+simplify (Quotient (Constant 0) (Constant 0)) = Indeterminate
 simplify (Quotient f (Constant 0)) = Undefined
 simplify (Quotient (Constant 0) f) = Constant 0
 simplify (Quotient f (Constant 1)) = f
@@ -67,7 +71,7 @@ simplify (Quotient u v)
     | u == v    = Constant 1
     | otherwise = Quotient (simplify u) (simplify v)
 simplify (Polynomial 1 f) = f
-simplify (Polynomial 0 (Constant 0)) = Undefined
+simplify (Polynomial 0 (Constant 0)) = Indeterminate
 simplify (Polynomial _ (Constant 0)) = Constant 0
 simplify f = f
 
@@ -85,12 +89,14 @@ evaluate (Constant a) x = a
 evaluate X x = x
 evaluate (Sum u v) x = (evaluate u x) + (evaluate v x)
 evaluate (Product u v) x = (evaluate u x) * (evaluate v x)
+evaluate (Quotient u v) x = (evaluate u x) / (evaluate v x)
 evaluate (Polynomial p f) x = (evaluate f x) ** p
 evaluate (Sin f) x = sin (evaluate f x)
 evaluate (Cos f) x = cos (evaluate f x)
 evaluate (Exponential b f) x = b ** (evaluate f x)
 evaluate (Log b f) x = logBase b (evaluate f x)
 evaluate Undefined x = undefined
+evaluate Indeterminate x = undefined
 
 isInt :: Double -> Double -> Bool
 isInt precision x = x - fromInteger (round x) < precision
